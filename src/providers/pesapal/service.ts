@@ -1,12 +1,24 @@
 import { AbstractPaymentProvider } from "@medusajs/framework/utils"
 import {
-  CreatePaymentProviderSession,
-  UpdatePaymentProviderSession,
-  PaymentProviderSessionResponse,
-  PaymentProviderError,
+  InitiatePaymentInput,
+  InitiatePaymentOutput,
+  UpdatePaymentInput,
+  UpdatePaymentOutput,
   PaymentSessionStatus,
-  PaymentProviderContext,
-  PaymentProviderAuthorizeResponse,
+  AuthorizePaymentInput,
+  AuthorizePaymentOutput,
+  CapturePaymentInput,
+  CapturePaymentOutput,
+  RefundPaymentInput,
+  RefundPaymentOutput,
+  CancelPaymentInput,
+  CancelPaymentOutput,
+  DeletePaymentInput,
+  DeletePaymentOutput,
+  RetrievePaymentInput,
+  RetrievePaymentOutput,
+  GetPaymentStatusInput,
+  GetPaymentStatusOutput,
   WebhookActionResult,
   ProviderWebhookPayload,
 } from "@medusajs/framework/types"
@@ -138,11 +150,11 @@ export class PesapalProviderService extends AbstractPaymentProvider<PesapalOptio
   }
 
   async initiatePayment(
-    context: CreatePaymentProviderSession
-  ): Promise<PaymentProviderError | PaymentProviderSessionResponse> {
+    input: InitiatePaymentInput
+  ): Promise<InitiatePaymentOutput> {
     try {
-      const { currency_code, amount, context: sessionContext } = context
-      const { customer, billing_address } = sessionContext
+      const { currency_code, amount, context: sessionContext } = input
+      const { customer, billing_address } = (sessionContext || {}) as any
 
       // Generate a unique merchant reference
       const merchantReference = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -157,17 +169,17 @@ export class PesapalProviderService extends AbstractPaymentProvider<PesapalOptio
         notification_id: await this.getIpnId(),
         billing_address: {
           email_address: customer?.email || (billing_address as any)?.email || "customer@example.com",
-          phone_number: billing_address?.phone || customer?.phone || "",
-          country_code: billing_address?.country_code || "KE",
+          phone_number: (billing_address as any)?.phone || customer?.phone || "",
+          country_code: (billing_address as any)?.country_code || "KE",
           first_name: (billing_address as any)?.first_name || customer?.first_name || "Customer",
-          middle_name: billing_address?.address_2 || "",
+          middle_name: (billing_address as any)?.address_2 || "",
           last_name: (billing_address as any)?.last_name || customer?.last_name || "",
-          line_1: billing_address?.address_1 || "",
-          line_2: billing_address?.address_2 || "",
-          city: billing_address?.city || "",
-          state: billing_address?.province || "",
-          postal_code: billing_address?.postal_code || "",
-          zip_code: billing_address?.postal_code || "",
+          line_1: (billing_address as any)?.address_1 || "",
+          line_2: (billing_address as any)?.address_2 || "",
+          city: (billing_address as any)?.city || "",
+          state: (billing_address as any)?.province || "",
+          postal_code: (billing_address as any)?.postal_code || "",
+          zip_code: (billing_address as any)?.postal_code || "",
         },
       }
 
@@ -184,6 +196,7 @@ export class PesapalProviderService extends AbstractPaymentProvider<PesapalOptio
       }
 
       return {
+        id: response.order_tracking_id,
         data: {
           order_tracking_id: response.order_tracking_id,
           merchant_reference: response.merchant_reference,
@@ -195,101 +208,76 @@ export class PesapalProviderService extends AbstractPaymentProvider<PesapalOptio
       }
     } catch (error) {
       this.logger_.error("Failed to initiate Pesapal payment", error)
-      return {
-        error: "Failed to initiate payment",
-        code: "initiate_failed",
-        detail: error.message,
-      }
+      throw new Error("Failed to initiate payment")
     }
   }
 
   async authorizePayment(
-    paymentSessionData: Record<string, unknown>,
-    context: Record<string, unknown>
-  ): Promise<PaymentProviderError | PaymentProviderAuthorizeResponse> {
+    input: AuthorizePaymentInput
+  ): Promise<AuthorizePaymentOutput> {
     try {
-      const { order_tracking_id } = paymentSessionData
+      const { order_tracking_id } = (input.data || {}) as any
 
-      if (!order_tracking_id) {
-        throw new Error("No order tracking ID found in payment session data")
-      }
-
-      // Check transaction status
+      // Get transaction status from Pesapal
       const statusResponse: PesapalTransactionStatus = await this.makeAuthenticatedRequest(
         `/api/Transactions/GetTransactionStatus?orderTrackingId=${order_tracking_id}`
       )
 
-      const status = this.mapPesapalStatus(statusResponse.payment_status_code)
-
+      const status = this.mapPesapalStatus(statusResponse.payment_status_description)
+      
       return {
         status: status,
         data: {
-          ...paymentSessionData,
-          status: status,
-          payment_status_code: statusResponse.payment_status_code,
+          ...input.data,
+          payment_status: statusResponse.payment_status_description,
           confirmation_code: statusResponse.confirmation_code,
           payment_method: statusResponse.payment_method,
           payment_account: statusResponse.payment_account,
+          status: status,
         },
       }
     } catch (error) {
       this.logger_.error("Failed to authorize Pesapal payment", error)
-      return {
-        error: "Failed to authorize payment",
-        code: "authorize_failed",
-        detail: error.message,
-      }
+      throw new Error("Failed to authorize payment")
     }
   }
 
   async capturePayment(
-    paymentSessionData: Record<string, unknown>
-  ): Promise<PaymentProviderError | PaymentProviderSessionResponse["data"]> {
+    input: CapturePaymentInput
+  ): Promise<CapturePaymentOutput> {
     try {
       // Pesapal doesn't have a separate capture step - payment is captured upon authorization
-      // We just return the current data
-      const { order_tracking_id } = paymentSessionData
+      const { order_tracking_id } = (input.data || {}) as any
 
-      if (order_tracking_id) {
-        // Check the current status to return updated data
-        const statusResponse: PesapalTransactionStatus = await this.makeAuthenticatedRequest(
-          `/api/Transactions/GetTransactionStatus?orderTrackingId=${order_tracking_id}`
-        )
+      const statusResponse: PesapalTransactionStatus = await this.makeAuthenticatedRequest(
+        `/api/Transactions/GetTransactionStatus?orderTrackingId=${order_tracking_id}`
+      )
 
-        return {
-          ...paymentSessionData,
-          status: "captured",
-          payment_status_code: statusResponse.payment_status_code,
+      return {
+        data: {
+          ...input.data,
+          payment_status: statusResponse.payment_status_description,
           confirmation_code: statusResponse.confirmation_code,
-          payment_method: statusResponse.payment_method,
-        }
+          status: "captured",
+        },
       }
-
-      return paymentSessionData
     } catch (error) {
       this.logger_.error("Failed to capture Pesapal payment", error)
-      return {
-        error: "Failed to capture payment",
-        code: "capture_failed",
-        detail: error.message,
-      }
+      throw new Error("Failed to capture payment")
     }
   }
 
   async refundPayment(
-    paymentSessionData: Record<string, unknown>,
-    refundAmount: number
-  ): Promise<PaymentProviderError | PaymentProviderSessionResponse["data"]> {
+    input: RefundPaymentInput
+  ): Promise<RefundPaymentOutput> {
     try {
-      const { confirmation_code } = paymentSessionData
+      const { confirmation_code } = (input.data || {}) as any
+      const { amount } = input
 
-      if (!confirmation_code) {
-        throw new Error("No confirmation code found for refund")
-      }
-
+      // Prepare refund data
       const refundData = {
         confirmation_code: confirmation_code,
-        amount: Number(refundAmount) / 100, // Convert from cents
+        amount: Number(amount) / 100, // Convert from cents
         username: this.options_.merchant_name || "merchant",
         remarks: `Refund for payment ${confirmation_code}`,
       }
@@ -303,108 +291,112 @@ export class PesapalProviderService extends AbstractPaymentProvider<PesapalOptio
       )
 
       return {
-        ...paymentSessionData,
-        refund_status: "refunded",
-        refund_amount: refundAmount,
-        refund_response: response,
+        data: {
+          ...input.data,
+          refund_status: "refunded",
+          refund_amount: amount,
+          refund_response: response,
+        },
       }
     } catch (error) {
       this.logger_.error("Failed to refund Pesapal payment", error)
-      return {
-        error: "Failed to refund payment",
-        code: "refund_failed",
-        detail: error.message,
-      }
+      throw new Error("Failed to refund payment")
     }
   }
 
   async cancelPayment(
-    paymentSessionData: Record<string, unknown>
-  ): Promise<PaymentProviderError | PaymentProviderSessionResponse["data"]> {
+    input: CancelPaymentInput
+  ): Promise<CancelPaymentOutput> {
     try {
       // Pesapal doesn't have explicit cancel - we just mark it as cancelled
       return {
-        ...paymentSessionData,
-        status: "canceled",
+        data: {
+          ...input.data,
+          status: "canceled",
+          canceled_at: new Date().toISOString(),
+        },
       }
     } catch (error) {
       this.logger_.error("Failed to cancel Pesapal payment", error)
-      return {
-        error: "Failed to cancel payment",
-        code: "cancel_failed",
-        detail: error.message,
-      }
+      throw new Error("Failed to cancel payment")
     }
   }
 
   async deletePayment(
-    paymentSessionData: Record<string, unknown>
-  ): Promise<PaymentProviderError | PaymentProviderSessionResponse["data"]> {
+    input: DeletePaymentInput
+  ): Promise<DeletePaymentOutput> {
     // Return the session data as-is since Pesapal doesn't support deleting payments
-    return paymentSessionData
+    return {
+      data: input.data,
+    }
   }
 
   async retrievePayment(
-    paymentSessionData: Record<string, unknown>
-  ): Promise<PaymentProviderError | PaymentProviderSessionResponse["data"]> {
+    input: RetrievePaymentInput
+  ): Promise<RetrievePaymentOutput> {
     try {
-      const { order_tracking_id } = paymentSessionData
+      const { order_tracking_id } = (input.data || {}) as any
 
-      if (!order_tracking_id) {
-        return paymentSessionData
-      }
-
+      // Get transaction status from Pesapal
       const statusResponse: PesapalTransactionStatus = await this.makeAuthenticatedRequest(
         `/api/Transactions/GetTransactionStatus?orderTrackingId=${order_tracking_id}`
       )
 
-      const status = this.mapPesapalStatus(statusResponse.payment_status_code)
-
       return {
-        ...paymentSessionData,
-        status: status,
-        payment_status_code: statusResponse.payment_status_code,
-        confirmation_code: statusResponse.confirmation_code,
-        payment_method: statusResponse.payment_method,
-        payment_account: statusResponse.payment_account,
-        amount: statusResponse.amount * 100, // Convert to cents
-        currency: statusResponse.currency,
+        data: {
+          ...input.data,
+          payment_status: statusResponse.payment_status_description,
+          confirmation_code: statusResponse.confirmation_code,
+          payment_method: statusResponse.payment_method,
+          payment_account: statusResponse.payment_account,
+          amount: statusResponse.amount,
+          currency: statusResponse.currency,
+          created_date: statusResponse.created_date,
+        },
       }
     } catch (error) {
       this.logger_.error("Failed to retrieve Pesapal payment", error)
-      return {
-        error: "Failed to retrieve payment",
-        code: "retrieve_failed",
-        detail: error.message,
-      }
+      throw new Error("Failed to retrieve payment")
     }
   }
 
   async updatePayment(
-    context: UpdatePaymentProviderSession
-  ): Promise<PaymentProviderError | PaymentProviderSessionResponse> {
+    input: UpdatePaymentInput
+  ): Promise<UpdatePaymentOutput> {
     // Return the current session data since Pesapal doesn't support updating payments
-    return { data: context.data }
+    return { 
+      data: input.data,
+    }
   }
 
   async getPaymentStatus(
-    paymentSessionData: Record<string, unknown>
-  ): Promise<PaymentSessionStatus> {
+    input: GetPaymentStatusInput
+  ): Promise<GetPaymentStatusOutput> {
     try {
-      const { order_tracking_id } = paymentSessionData
+      const { order_tracking_id } = (input.data || {}) as any
 
-      if (!order_tracking_id) {
-        return "pending"
-      }
-
+      // Get transaction status from Pesapal
       const statusResponse: PesapalTransactionStatus = await this.makeAuthenticatedRequest(
         `/api/Transactions/GetTransactionStatus?orderTrackingId=${order_tracking_id}`
       )
 
-      return this.mapPesapalStatus(statusResponse.payment_status_code)
+      const status = this.mapPesapalStatus(statusResponse.payment_status_description)
+
+      return {
+        status: status,
+        data: {
+          ...input.data,
+          payment_status: statusResponse.payment_status_description,
+          confirmation_code: statusResponse.confirmation_code,
+          status: status,
+        },
+      }
     } catch (error) {
       this.logger_.error("Failed to get Pesapal payment status", error)
-      return "error"
+      return {
+        status: "pending",
+        data: input.data,
+      }
     }
   }
 
