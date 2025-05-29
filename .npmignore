@@ -1,0 +1,53 @@
+# Source files
+src/
+tsconfig.json
+.env*
+.env.template
+
+# Development files
+.github/
+.vscode/
+.idea/
+*.log
+*.logs
+logs/
+
+# Test files
+test/
+tests/
+__tests__/
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+coverage/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+
+# Node modules
+node_modules/
+
+# Build artifacts (keep .medusa/server)
+dist/
+build/
+
+# Development
+.yarn/
+yarn.lock
+package-lock.json
+pnpm-lock.yaml
+
+# IDE
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp 
