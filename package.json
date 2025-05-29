@@ -7,7 +7,7 @@
   "homepage": "https://github.com/mrrobotke/medusa-payment-pesapal#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mrrobotke/medusa-payment-pesapal.git"
+    "url": "https://github.com/mrrobotke/medusa-payment-pesapal.git"
   },
   "bugs": {
     "url": "https://github.com/mrrobotke/medusa-payment-pesapal/issues"
