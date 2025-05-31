@@ -224,7 +224,7 @@ export class PesapalProviderService extends AbstractPaymentProvider<PesapalOptio
       )
 
       const status = this.mapPesapalStatus(statusResponse.payment_status_description)
-      
+
       return {
         status: status,
         data: {
@@ -249,11 +249,11 @@ export class PesapalProviderService extends AbstractPaymentProvider<PesapalOptio
       // Pesapal doesn't have a separate capture step - payment is captured upon authorization
       const { order_tracking_id } = (input.data || {}) as any
 
-      const statusResponse: PesapalTransactionStatus = await this.makeAuthenticatedRequest(
-        `/api/Transactions/GetTransactionStatus?orderTrackingId=${order_tracking_id}`
-      )
+        const statusResponse: PesapalTransactionStatus = await this.makeAuthenticatedRequest(
+          `/api/Transactions/GetTransactionStatus?orderTrackingId=${order_tracking_id}`
+        )
 
-      return {
+        return {
         data: {
           ...input.data,
           payment_status: statusResponse.payment_status_description,
@@ -293,9 +293,9 @@ export class PesapalProviderService extends AbstractPaymentProvider<PesapalOptio
       return {
         data: {
           ...input.data,
-          refund_status: "refunded",
+        refund_status: "refunded",
           refund_amount: amount,
-          refund_response: response,
+        refund_response: response,
         },
       }
     } catch (error) {
@@ -312,7 +312,7 @@ export class PesapalProviderService extends AbstractPaymentProvider<PesapalOptio
       return {
         data: {
           ...input.data,
-          status: "canceled",
+        status: "canceled",
           canceled_at: new Date().toISOString(),
         },
       }
@@ -346,11 +346,11 @@ export class PesapalProviderService extends AbstractPaymentProvider<PesapalOptio
         data: {
           ...input.data,
           payment_status: statusResponse.payment_status_description,
-          confirmation_code: statusResponse.confirmation_code,
-          payment_method: statusResponse.payment_method,
-          payment_account: statusResponse.payment_account,
+        confirmation_code: statusResponse.confirmation_code,
+        payment_method: statusResponse.payment_method,
+        payment_account: statusResponse.payment_account,
           amount: statusResponse.amount,
-          currency: statusResponse.currency,
+        currency: statusResponse.currency,
           created_date: statusResponse.created_date,
         },
       }
