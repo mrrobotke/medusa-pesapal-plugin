@@ -66,6 +66,7 @@ interface PesapalTransactionStatus {
 
 export class PesapalProviderService extends AbstractPaymentProvider<PesapalOptions> {
   static identifier = "pesapal"
+  static displayName = "Pesapal"
   
   protected readonly options_: PesapalOptions
   protected logger_: any
