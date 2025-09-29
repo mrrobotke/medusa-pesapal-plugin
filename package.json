@@ -1,6 +1,6 @@
 {
   "name": "medusa-payment-pesapal",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "Pesapal payment provider plugin for Medusa v2 - Accept payments via Pesapal gateway with support for M-Pesa, Airtel Money, and other East African payment methods",
   "author": "Antony Ngigge <antonyngigge@gmail.com> (https://iworldafric.com)",
   "license": "MIT",
