@@ -4,13 +4,13 @@
   "description": "Pesapal payment provider plugin for Medusa v2 - Accept payments via Pesapal gateway with support for M-Pesa, Airtel Money, and other East African payment methods",
   "author": "Antony Ngigge <antonyngigge@gmail.com> (https://iworldafric.com)",
   "license": "MIT",
-  "homepage": "https://github.com/mrrobotke/medusa-payment-pesapal#readme",
+  "homepage": "https://github.com/mrrobotke/medusa-pesapal-plugin#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mrrobotke/medusa-payment-pesapal.git"
+    "url": "https://github.com/mrrobotke/medusa-pesapal-plugin.git"
   },
   "bugs": {
-    "url": "https://github.com/mrrobotke/medusa-payment-pesapal/issues"
+    "url": "https://github.com/mrrobotke/medusa-pesapal-plugin/issues"
   },
   "files": [
     ".medusa/server"
