@@ -83,7 +83,7 @@
     "@medusajs/icons": "2.10.3",
     "@medusajs/medusa": "2.10.3",
     "@medusajs/test-utils": "2.10.3",
-    "@medusajs/ui": "4.0.3",
+    "@medusajs/ui": "4.0.23",
     "@mikro-orm/cli": "6.4.3",
     "@mikro-orm/core": "6.4.3",
     "@mikro-orm/knex": "6.4.3",
